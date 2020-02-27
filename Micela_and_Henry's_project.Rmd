@@ -1,0 +1,212 @@
+---
+title: "project"
+author: "Henry Chow"
+date: "May 2, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(tidyverse)
+library(tibble)
+library(magrittr)
+library(hflights)
+library(ggplot2)
+library(scales)
+library(dplyr)
+
+library(lubridate)
+
+leno <- read_csv("C:/cygwin64/home/henry/DS/leno.csv")
+kim <- read_csv("C:/cygwin64/home/henry/DS/kim.csv")
+breed <- read_csv("C:/cygwin64/home/henry/DS/Breed1.csv")
+wiener <- read_csv("C:/cygwin64/home/henry/DS/wiener.csv")
+wiener460 <- read_csv("C:/cygwin64/home/henry/DS/wienerform460.csv")
+all <- read_csv("C:/cygwin64/home/henry/DS/all.csv")
+breed$Intr_NamL <- as.character(breed$Intr_NamL)
+breed$Intr_City <- as.character(breed$Intr_City)
+breed$Intr_State <- as.character(breed$Intr_State)
+wiener460$Memo_RefNo<- as.character(wiener460$Memo_RefNo)
+breed$Intr_Location<- as.character(breed$Intr_Location)
+winners <- full_join(breed, wiener460)
+```
+
+```{r}
+all %>% 
+  mutate(amount = Tran_Amt1+Tran_Amt2) %>% 
+  filter(amount<1) %>% 
+  select(Filer_NamL, amount) %>% 
+  count(Filer_NamL) %>% 
+  ggplot()+
+  geom_col(aes(x=reorder(Filer_NamL,n), y=n, fill=Filer_NamL))+
+  theme(axis.text.x = element_text(angle=25, hjust=1))+
+  scale_fill_brewer(palette="Set2")+
+  xlab("PAC Name")+
+  ylab("Number of Reimbursement")
+
+```
+
+
+```{r}
+all %>% 
+  group_by(Filer_NamL) %>% 
+  count(Tran_Amt1) %>% 
+  summarise(sum=sum(n)) %>% 
+  arrange(desc(sum))
+```
+
+```{r}
+all %>% 
+  group_by(Filer_NamL) %>% 
+  count(Tran_Amt1) %>% 
+  summarise(sum=sum(n), totalmoney=sum(Tran_Amt1)) %>% 
+  arrange(desc(sum)) %>% 
+  slice(1:3) %>% 
+  ggplot()+
+  geom_col(aes(x=reorder(Filer_NamL,sum), y=sum, fill=Filer_NamL))+
+  scale_fill_brewer(palette = "Set2")+
+  theme(axis.text.x = element_text(angle=45, hjust=1), legend.position = "none")+
+  xlab("candidate")+
+  ylab("number of donations")
+```
+```{r}
+winners %>% 
+  group_by(Filer_NamL) %>% 
+  count(Tran_Amt1) %>% 
+  summarise(sum=sum(n), totalmoney=sum(Tran_Amt1)) %>% 
+  arrange(desc(sum)) %>% 
+  slice(1:3) %>% 
+  ggplot()+
+  geom_col(aes(x=reorder(Filer_NamL,sum), y=sum, fill=Filer_NamL))+
+  scale_fill_brewer(palette = "Set2")+
+  theme(axis.text.x = element_blank(), legend.position = "none")+
+  xlab("Candidate")+
+  ylab("Number of donations")
+```
+
+
+
+
+```{r}
+winners %>% 
+  group_by(Filer_NamL) %>% 
+  count(Tran_Amt1) %>% 
+  summarise(sum=sum(n), totalmoney=sum(Tran_Amt1)) %>% 
+  arrange(desc(totalmoney)) %>% 
+  slice(1:4) %>% 
+  ggplot()+
+  geom_col(aes(x=reorder(Filer_NamL,totalmoney), y=totalmoney, fill=Filer_NamL))+
+  scale_fill_brewer(palette = "Set2")+
+  theme(axis.text.x = element_blank(), legend.title = element_text("candidates"), legend.position = "none")+
+  xlab("PAC Donor Name")+
+  ylab("Total Donation Amount")+
+  scale_y_continuous(labels=dollar)
+```
+
+
+
+
+
+```{r}
+
+
+all %>% 
+  group_by(Filer_NamL, Thru_Date) %>% 
+  arrange(Thru_Date) %>% 
+  summarise(sum=sum(Tran_Amt1)) %>%
+  mutate(date= paste((substring(Thru_Date, 7,11)),"/",substring(Thru_Date, 1, 2))) %>% 
+  arrange(desc(sum)) %>% 
+  filter(sum>100000) %>% 
+  ggplot()+
+  geom_point(aes(x=reorder(date, Thru_Date), y=sum, group=Filer_NamL, color=Filer_NamL, size=3), alpha=.9)+
+  theme(legend.position = "none")+
+  scale_y_continuous(labels= dollar)+
+  ylab("donation amount")+
+  xlab("Date (year/month)")
+
+```
+
+
+
+
+```{r}
+sfZipCodes <- c(94102,94103,94104,94105,94107,94108,94109, 94110, 94111,94112, 94114, 94115, 94116,94117,94118,94121, 94122,94123,94124,94127, 94129, 94130, 94131, 94132, 94133, 94134)
+zipPop <- c(25531,23909,305,4801,26762,13518,54412,70804,3493,80726,32328, 32882,43923,40932,39567,43597,57805,23710,34296,19075,2730, 2501,27914,31425,27580,38889)
+zipData <- cbind(sfZipCodes, zipPop)
+
+winners %>% 
+  group_by(Filer_NamL) %>% 
+  filter(!is.na(Tran_Location)) %>% 
+  select(Filer_NamL, Tran_Location) %>% 
+  mutate(zip = substring(Tran_Location,1,5)) %>% 
+  filter(zip %in% sfZipCodes) %>% 
+  count(zip) %>% 
+  arrange(desc(n)) %>% 
+  ggplot()+
+  geom_col(aes(x=zip, y=n, fill=Filer_NamL), position="dodge")+
+  theme(legend.position = "none", axis.text.x = element_text(angle=40, hjust=1), axis.ticks = element_blank())+
+  scale_fill_brewer(palette = "Set2")+
+  ylab("number of donations")
+```
+
+
+```{r}
+all %>% 
+  group_by(Filer_NamL) %>% 
+  filter(!is.na(Tran_Location)) %>% 
+  select(Filer_NamL, Tran_Location) %>% 
+  mutate(zip = substring(Tran_Location,1,5)) %>% 
+  filter(zip %in% sfZipCodes) %>% 
+  count(zip) %>% 
+  arrange(desc(n)) %>% 
+  ggplot()+
+  geom_col(aes(x=zip, y=n, fill=Filer_NamL), position="dodge")+
+  theme(legend.position = "none", axis.text.x = element_text(angle=40, hjust=1), axis.ticks = element_blank())+
+  scale_fill_brewer(palette = "Set2")+
+  ylab("number of donations")
+```
+
+
+```{r}
+zipNum <- all %>% 
+  filter(!is.na(Tran_Location)) %>% 
+  select(Filer_NamL, Tran_Location) %>% 
+  mutate(zip = substring(Tran_Location,1,5)) %>% 
+  filter(zip %in% sfZipCodes) %>% 
+  count(zip) %>% 
+  select(n)
+
+colnames(zipData)[1] <- "zip"
+totalZip <- cbind(zipData, zipNum)
+totalZip$zip <- as.character(totalZip$zip)
+
+totalZip %>% 
+  mutate(perPerson = n/zipPop) %>% 
+  arrange(desc(perPerson)) %>% 
+  ggplot()+
+  geom_col(aes(x=zip, y=perPerson, fill=zip))+
+  theme(axis.text.x = element_text(angle=38, hjust = 1))+
+  ylab("Percent of residents who donate")+
+  scale_y_continuous(labels = percent)+
+  xlab("zip code")
+
+```
+
+
+
+
+
+
+
+
+
+
